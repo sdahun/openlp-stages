@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OpenLP Lower3rd</title>
+  <style>
+    body {
+      background-color: #2eff06;
+      margin: 0;
+    }
+
+    svg {
+      position: absolute;
+      margin: auto 0;
+      bottom: 100px;
+      width: 100%;
+      /* height = 5 + (lines_count * 55) */
+      height: 115px;
+
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 32pt;
+      fill: white;
+      text-align: center;
+    }
+
+    #svgText {
+      fill: white;
+      stroke: black;
+      stroke-width: 7px;
+      stroke-linejoin: round;
+      paint-order: stroke;
+    }
+  </style>
+</head>
+<body>
+    <svg id="svgImage">
+      <text id="svgText" y="45" transform="translate(647)">
+      </text>
+    </svg>
+</body>
+<script>
+  window.OpenLP = {
+    websocket_port: 4317,
+
+    connect: function () {
+      const host = window.location.hostname;
+      ws = new WebSocket(`ws://${host}:${OpenLP.websocket_port}`);
+      ws.onmessage = (event) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          data = JSON.parse(reader.result.toString()).results;
+
+          if (OpenLP.currentItem != data.item || OpenLP.currentService != data.service) {
+            OpenLP.currentItem = data.item;
+            OpenLP.currentService = data.service;
+            OpenLP.loadSlides();
+          }
+          else if (OpenLP.currentSlide != data.slide) {
+            OpenLP.currentSlide = parseInt(data.slide, 10);
+            OpenLP.updateSlide();
+          }
+        };
+  
+        reader.readAsText(event.data);
+      };
+    },
+
+    loadSlides: function() {
+      fetch('/api/v2/controller/live-items?_=' + Date.now())
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(data) {
+        OpenLP.currentSlides = data.slides;
+        OpenLP.currentSlide = 0;
+
+        OpenLP.currentSlides.forEach(function (slide, idx) {
+          if (slide["selected"])
+            OpenLP.currentSlide = idx;
+        });
+
+        OpenLP.updateSlide();
+      });
+    },
+
+    updateSlide: function() {
+      let content = '';
+      let lines = OpenLP.currentSlides[OpenLP.currentSlide].text.split("\n");
+
+      lines.forEach( function (line, idx) {
+        content += '<tspan x="0" text-anchor="middle"';
+        if (idx != 0)
+          content += ' dy="55px"';
+        content += '>' + line + '</tspan>';
+      });
+
+      document.getElementById('svgImage').style['height'] = lines.length * 55 + 5;
+      document.getElementById('svgText').innerHTML = content;
+    },
+    
+    alignToCenter: function() {
+      document.getElementById('svgText').setAttribute('transform', 'translate(' + ((window.innerWidth / 2)+7) + ')');
+    }
+  }
+
+  window.onresize = OpenLP.alignToCenter;
+  OpenLP.alignToCenter();
+  OpenLP.connect();
+</script>
+</html>
