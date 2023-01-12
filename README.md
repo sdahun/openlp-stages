@@ -16,4 +16,5 @@ Here are our own custom stage views for OpenLP 3.0+
 - Optimised for upstream keying
 
 Screenshot:
+
 ![Lower3rd screenshot example](screenshots/lower3rd_screenshot_360p.png?raw=true)
